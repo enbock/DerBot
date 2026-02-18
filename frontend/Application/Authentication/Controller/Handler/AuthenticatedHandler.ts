@@ -3,17 +3,21 @@ import type AuthenticationAdapter from '../../Adapter';
 import type StateTransition from '../../StateTransition';
 import type UserAuthenticationUseCase from '../../../../Core/Authentication/UserAuthenticationUseCase/UserAuthenticationUseCase';
 import AuthenticatedView from '../../View/AuthenticatedView';
+import type ChatController from '../../../Chat/Controller/Controller';
 
 export default class AuthenticatedHandler implements ControllerHandler {
   private view: AuthenticatedView;
+  private readonly chatController: ChatController;
 
   constructor(
     private readonly adapter: AuthenticationAdapter,
     private readonly rootElement: HTMLElement,
     private readonly stateTransition: StateTransition,
-    private readonly authenticationUseCase: UserAuthenticationUseCase
+    private readonly authenticationUseCase: UserAuthenticationUseCase,
+    chatController: ChatController
   ) {
     this.view = new AuthenticatedView(adapter);
+    this.chatController = chatController;
   }
 
   async initialize(): Promise<void> {
@@ -38,5 +42,9 @@ export default class AuthenticatedHandler implements ControllerHandler {
 
   showAuthenticatedView(nickname: string): void {
     this.view.render(this.rootElement, nickname);
+    const chatRoot = document.getElementById('chatRoot');
+    if (chatRoot) {
+      this.chatController.showChatView(chatRoot);
+    }
   }
 }

@@ -54,6 +54,19 @@ DerBot implementiert ein sicheres TOTP (Time-based One-Time Password) Authentica
 - **Rate Limiting** (5 Login-Versuche pro Minute global)
 - **Logout-Funktion** mit Session-Bereinigung
 
+## Chat Feature
+
+DerBot bietet eine Chat-Ansicht mit Session-Management und einem technischen Agenten-Log.
+
+### Features
+
+- **Neuer Chat** erzeugt eine neue Session-ID
+- **Chat-Liste** zentral mit mehrzeiligem Eingabefeld und Senden-Button
+- **Strg+Enter** sendet eine Nachricht, Enter erzeugt eine neue Zeile
+- **Agent Log** rechts sichtbar (nur Desktop ab 1024px)
+- **Rudimentaeres Markdown** (bold, italic, inline code, links)
+- **Chat-State** im Frontend Storage (In-Memory)
+
 ### Frontend Nutzung
 
 1. **Server starten**: `npm start`
@@ -96,6 +109,23 @@ Response: { "success": true }
 GET /api/auth/verify
 Header: Authorization: Bearer <token>
 Response: { "valid": true, "nickname": "myuser" }
+
+# Chat session erstellen
+POST /api/chat/session
+Response: { "sessionId": "...", "createdAt": "2026-02-18T..." }
+
+# Chat sessions listen
+GET /api/chat/sessions
+Response: { "sessions": [{ "id": "...", "createdAt": "..." }] }
+
+# Chat session laden
+GET /api/chat/session?sessionId=<id>
+Response: { "messages": [...], "agentLogs": [...] }
+
+# Nachricht senden
+POST /api/chat/message
+Body: { "sessionId": "...", "content": "..." }
+Response: { "message": {...}, "agentMessage": {...}, "agentLogs": [...] }
 ```
 
 ### Datenspeicherung
@@ -149,18 +179,31 @@ Benutzerdaten werden in `.data/` gespeichert:
 
 ## Tests
 
-Unit-Tests mit `tsx --test` für vollständige TypeScript-Unterstützung (46 Tests):
+Unit-Tests mit `tsx --test` für vollständige TypeScript-Unterstützung (84 Tests):
 
 ```bash
 # Alle Tests ausführen
 npm test
 
 # Test-Übersicht:
-# - Backend (9 Tests): RateLimitService (4), TotpService (5)
-# - Frontend (37 Tests):
-#   - SessionStorage (12) - localStorage Session-Verwaltung
-#   - UserAuthenticationUseCase (12) - Konsolidierte Auth-Operationen
-#   - AuthenticationClient (13) - HTTP API Communication
+# - Backend (32 Tests):
+#   - ChatController (3)
+#   - RateLimitService (4)
+#   - TotpService (5)
+#   - UserAuthenticationUseCase (12)
+#   - ChatUseCase (4)
+#   - DummyAIChatClient (1)
+#   - FileChatStorage (3)
+# - Frontend (52 Tests):
+#   - ChatController (2)
+#   - ChatHandler (2)
+#   - ChatPresenter (1)
+#   - MemoryChatStateStorage (1)
+#   - BrowserLocalStorage (12)
+#   - UserAuthenticationUseCase (12)
+#   - ChatUseCase (4)
+#   - Ajax (13)
+#   - Chat Ajax (5)
 ```
 
 ### Test-Konfiguration

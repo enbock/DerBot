@@ -9,7 +9,7 @@
     "build:backend": "webpack --config webpack.backend.config.cjs",
     "build:frontend": "webpack --config webpack.frontend.config.cjs",
     "build:watch": "npm run build:backend -- --watch & npm run build:frontend -- --watch",
-    "start": "node build/backend/main.js",
+    "start": "npm run build && node build/backend/main.js",
     "test": "tsx --test backend/**/*.test.ts frontend/**/*.test.ts",
     "dev": "npm run build:watch & npm run start"
   },

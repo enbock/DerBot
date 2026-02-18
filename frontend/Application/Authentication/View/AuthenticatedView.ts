@@ -9,13 +9,15 @@ export default class AuthenticatedView {
 
   render(container: HTMLElement, nickname: string): void {
     container.innerHTML = `
-      <div class="auth-container authenticated">
-        <h1>Welcome to DerBot, ${nickname}!</h1>
-        <div class="user-info">
-          <p>You are successfully logged in.</p>
-          <p>Your session is valid for 7 days.</p>
-        </div>
-        <button id="logoutBtn" class="btn-danger">Logout</button>
+      <div class="app-shell">
+        <header class="app-header">
+          <div class="app-title">
+            <h1>Welcome, ${nickname}</h1>
+            <p>Session active</p>
+          </div>
+          <button id="logoutBtn" class="btn-danger">Logout</button>
+        </header>
+        <div id="chatRoot"></div>
       </div>
     `;
 

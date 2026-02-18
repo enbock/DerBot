@@ -219,3 +219,93 @@
 - Nur numerische Eingaben erlauben (andere Zeichen werden ignoriert)
 
 **Status:** ✅ Abgeschlossen (2026-02-17)
+
+---
+
+# Product Backlog: Chat mit User Feature
+
+## Epic: Chat-UI mit AIChatClient-Synchronisation (Dummy-Backend)
+
+**Erstellt:** 2026-02-18  
+**Status:** ✅ Vollständig Abgeschlossen
+
+---
+
+## User Story 1: Chat-Session starten und verwalten
+**Als** Benutzer  
+**möchte ich** einen neuen Chat starten  
+**damit** ich eine frische Unterhaltung beginnen kann.
+
+### Akzeptanzkriterien
+- [x] UI zeigt Button "Neuer Chat"
+### Technische Architektur
+- [x] Handler verwaltet keinen View-State (State kommt aus UseCase)
+- [x] Presenter erzeugt View-Model
+- [x] Domain-Controller initialisiert Handler
+- [x] Klick auf "Neuer Chat" erzeugt eine neue Chat-Session-ID
+- [x] Neue Session wird im Frontend als aktueller Chat gesetzt
+- [x] Session wird an das Backend gesendet und dort synchronisiert (Dummy-Implementierung)
+
+---
+
+## User Story 2: Chat-Nachrichten senden und anzeigen
+**Als** Benutzer  
+**möchte ich** Nachrichten im Chat senden und lesen  
+**damit** ich eine Unterhaltung mit dem System führen kann.
+
+### Akzeptanzkriterien
+- [x] UI zeigt Chat-Liste zentral in der Seite
+- [x] Unter der Chat-Liste befindet sich ein mehrzeiliges Eingabefeld
+- [x] Nachricht wird mit Strg+Enter gesendet
+- [x] Button "Senden" sendet die Nachricht ebenfalls
+- [x] Gesendete Nachricht erscheint sofort in der Chat-Liste
+- [x] Backend speichert/synchronisiert Nachrichten mit AIChatClient (Dummy-Implementierung)
+
+---
+
+## User Story 3: Agenten-Protokoll anzeigen (technische Einsicht)
+**Als** Benutzer  
+**möchte ich** das Protokoll von Agent und Subagenten sehen  
+**damit** ich nachvollziehen kann, was intern passiert.
+
+### Akzeptanzkriterien
+- [x] UI zeigt eine zweite Liste rechts neben der Chat-Liste (nur Desktop)
+- [x] Die Liste zeigt das Agenten-/Subagenten-Protokoll aus dem AIChatClient
+- [x] Auf mobilen Ansichten wird die Protokoll-Liste ausgeblendet
+- [x] Protokoll ist nur für die aktuelle Session sichtbar
+
+---
+
+## User Story 4: Rudimentäres Markdown-Rendering im Chat
+**Als** Benutzer  
+**möchte ich** einfache Formatierungen im Chat sehen  
+**damit** Inhalte besser lesbar sind.
+
+### Akzeptanzkriterien
+- [x] Chat-Liste rendert rudimentäres Markdown (z.B. **bold**, *italic*, `inline code`, Links)
+- [x] Keine zusätzliche Markdown-Library wird verwendet
+- [x] Rendering ist robust gegen leere oder unvollständige Eingaben
+
+---
+
+## Technische Anforderungen
+
+### Backend (TypeScript/Node.js)
+- Dummy-Infrastruktur für AIChatClient (keine externe API)
+- Endpoints nach bestehenden Patterns im Backend
+- Sync von Chat-Session und Messages an die Dummy-Infrastruktur
+
+### Frontend (TypeScript/HTML/CSS)
+- Chat-Layout: zentrale Chat-Liste, Eingabe darunter
+- Rechte Protokoll-Liste nur ab 1024px Breite sichtbar
+- Buttons: "Neuer Chat" und "Senden"
+- Strg+Enter sendet die Nachricht; Enter ohne Strg fügt neue Zeile ein
+- Rudimentäres Markdown-Rendering ohne externe Library
+
+---
+
+## Definition of Done
+- [x] Alle Akzeptanzkriterien erfüllt
+- [x] UI funktioniert auf Desktop und Mobile
+- [x] Dummy-Backend läuft ohne externe Abhängigkeiten
+- [x] Dokumentation in README.md aktualisiert (Kurzbeschreibung der Chat-Funktion)
