@@ -1,4 +1,5 @@
 const path = require('path');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   mode: 'development',
@@ -12,6 +13,7 @@ module.exports = {
           loader: 'ts-loader',
           options: {
             configFile: 'tsconfig.frontend.json',
+            transpileOnly: true,
           },
         },
         exclude: /node_modules/,
@@ -25,5 +27,13 @@ module.exports = {
     filename: 'main.js',
     path: path.resolve(__dirname, 'build/frontend'),
   },
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: 'frontend/index.html', to: 'index.html' },
+        { from: 'frontend/styles.css', to: 'styles.css' },
+      ],
+    }),
+  ],
   devtool: 'source-map',
 };

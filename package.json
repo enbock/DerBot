@@ -10,18 +10,29 @@
     "build:frontend": "webpack --config webpack.frontend.config.cjs",
     "build:watch": "npm run build:backend -- --watch & npm run build:frontend -- --watch",
     "start": "node build/backend/main.js",
-    "test": "node --test --experimental-strip-types backend/**/*.test.ts",
+    "test": "tsx --test backend/**/*.test.ts frontend/**/*.test.ts",
     "dev": "npm run build:watch & npm run start"
   },
-  "keywords": ["bot", "typescript", "clean-architecture", "ddd"],
+  "keywords": [
+    "bot",
+    "typescript",
+    "clean-architecture",
+    "ddd"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@types/qrcode": "^1.5.5",
+    "copy-webpack-plugin": "^11.0.0",
     "ts-loader": "^9.5.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.3",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   },
-  "dependencies": {}
+  "dependencies": {
+    "otplib": "^12.0.1",
+    "qrcode": "^1.5.3"
+  }
 }

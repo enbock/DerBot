@@ -1,24 +1,66 @@
-import Controller from './StartUp/Controller/Controller';
-import Handler from './StartUp/Controller/Handler/Handler';
-import View from './StartUp/View/View';
-import Adapter from './StartUp/Adapter';
-import type ControllerHandler from './ControllerHandler';
+import AuthenticationAdapter from './Authentication/Adapter';
+import Ajax from '../Infrastructure/Authentication/AuthenticationClient/Ajax/Ajax';
+import BrowserLocalStorage
+  from '../Infrastructure/Authentication/SessionStorage/BrowserLocalStorage/BrowserLocalStorage';
+import AuthenticationController from './Authentication/Controller/Controller';
+import AuthenticationStateHandler from './Authentication/Controller/Handler/AuthenticationStateHandler';
+import RegistrationHandler from './Authentication/Controller/Handler/RegistrationHandler';
+import LoginHandler from './Authentication/Controller/Handler/LoginHandler';
+import AuthenticatedHandler from './Authentication/Controller/Handler/AuthenticatedHandler';
+import UserAuthenticationUseCase from '../Core/Authentication/UserAuthenticationUseCase/UserAuthenticationUseCase';
 
-/**
- * Frontend Dependency Injection Container
- * Erstellt alle Controller-Instanzen im Konstruktor
- */
 export default class Container {
-  public readonly startUp: Controller;
+  public readonly startUp: AuthenticationController;
+  private readonly rootElement: HTMLElement;
 
   constructor() {
-    const adapter = new Adapter();
-    const view = new View(adapter);
+    this.rootElement = document.getElementById('content') || document.body;
     
-    const handlers: ControllerHandler[] = [
-      new Handler(adapter)
-    ];
+    // Infrastructure Layer
+    const authClient = new Ajax();
+    const sessionStorage = new BrowserLocalStorage();
     
-    this.startUp = new Controller(adapter, handlers, view);
+    // Application Layer
+    const authAdapter = new AuthenticationAdapter();
+    
+    // Core Layer (UseCase)
+    const authenticationUseCase = new UserAuthenticationUseCase(authClient, sessionStorage);
+    
+    // Create State Handler (implements StateTransition)
+    const authStateHandler = new AuthenticationStateHandler(
+      authAdapter,
+      authenticationUseCase
+    );
+    
+    // Create Sub-Handlers with UseCase
+    const registrationHandler = new RegistrationHandler(
+      authAdapter,
+      this.rootElement,
+      authStateHandler,
+      authenticationUseCase
+    );
+
+    const loginHandler = new LoginHandler(
+      authAdapter,
+      this.rootElement,
+      authStateHandler,
+      authenticationUseCase
+    );
+
+    const authenticatedHandler = new AuthenticatedHandler(
+      authAdapter,
+      this.rootElement,
+      authStateHandler,
+      authenticationUseCase
+    );
+
+    // Inject Sub-Handlers into State Handler
+    authStateHandler.setHandlers(registrationHandler, loginHandler, authenticatedHandler);
+    
+    // Create Authentication Controller with all handlers
+    this.startUp = new AuthenticationController(
+      authAdapter,
+      [authStateHandler, registrationHandler, loginHandler, authenticatedHandler]
+    );
   }
 }

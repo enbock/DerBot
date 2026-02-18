@@ -1,10 +1,10 @@
 import Controller from './StartUp/Controller/Controller';
-/**
- * Dependency Injection Container
- * Verwaltet alle Dependencies nach Inverse Dependency Principle
- */
+import HttpServer from './Http/HttpServer';
+import AuthenticationController from './Authentication/Controller/AuthenticationController';
 export default class Container {
     readonly startUp: Controller;
+    readonly httpServer: HttpServer;
+    readonly authenticationController: AuthenticationController;
     constructor();
 }
 //# sourceMappingURL=Container.d.ts.map

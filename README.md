@@ -39,6 +39,89 @@ npm run dev
 npm test
 ```
 
+## TOTP-Login Feature
+
+DerBot implementiert ein sicheres TOTP (Time-based One-Time Password) Authentication System.
+
+### Features
+
+- **Benutzerregistrierung** mit eindeutigem Nickname (3-20 Zeichen, alphanumerisch + Unterstrich)
+- **QR-Code Generierung** für Google Authenticator/Authy
+- **TOTP-only Login** - Identifikation nur via 6-stelligem Code (kein Nickname erforderlich)
+- **Zeitfenster** 30s mit ±1 Toleranz (±30s Genauigkeit)
+- **Session Management** mit 7 Tagen Gültigkeit (localStorage)
+- **Session-Wiederverwendung** - Ein User kann nur eine aktive Session haben
+- **Rate Limiting** (5 Login-Versuche pro Minute global)
+- **Logout-Funktion** mit Session-Bereinigung
+
+### Frontend Nutzung
+
+1. **Server starten**: `npm start`
+2. **Browser öffnen**: `http://localhost:8000`
+3. **Registrierung**:
+   - Nickname eingeben (z.B. "myuser")
+   - QR-Code mit Google Authenticator scannen
+   - Oder Secret manuell in Authenticator-App eingeben
+4. **Login**:
+   - **6 separate Eingabefelder** für den TOTP-Code
+   - **Auto-Focus**: Nach Eingabe einer Ziffer springt der Cursor automatisch zum nächsten Feld
+   - **Backspace**: Löscht Ziffer und springt zum vorherigen Feld
+   - **Paste-Funktion**: Einfügen (Strg+V) eines 6-stelligen Codes füllt alle Felder automatisch
+   - **Auto-Submit**: Nach Eingabe der 6. Ziffer wird der Login automatisch ausgelöst
+   - System identifiziert User automatisch anhand des Codes
+   - Bei Fehler: Felder werden rot markiert, nach 1 Sekunde geleert und Focus wird auf erstes Feld gesetzt
+5. **Nach erfolgreicher Anmeldung**: 
+   - Nickname wird angezeigt
+   - Session bleibt 7 Tage aktiv
+
+### API Endpoints
+
+```bash
+# Registrierung
+POST /api/auth/register
+Body: { "nickname": "myuser" }
+Response: { "secret": "...", "qrCodeDataUrl": "data:image/png;base64,..." }
+
+# Login (TOTP-only, ohne Nickname)
+POST /api/auth/login
+Body: { "totp": "123456" }
+Response: { "token": "...", "nickname": "myuser", "expiresAt": "2026-02-24T..." }
+
+# Logout
+POST /api/auth/logout
+Body: { "token": "..." }
+Response: { "success": true }
+
+# Session verifizieren
+GET /api/auth/verify
+Header: Authorization: Bearer <token>
+Response: { "valid": true, "nickname": "myuser" }
+```
+
+### Datenspeicherung
+
+Benutzerdaten werden in `.data/` gespeichert:
+- `.data/users.json` - Benutzer mit TOTP-Secrets
+- `.data/sessions.json` - Aktive Sessions (max. eine pro User)
+
+⚠️ **Hinweis**: Dateibasierte Speicherung nur für Entwicklung/Prototypen. Für Produktion sollte eine persistente Datenbank verwendet werden.
+
+### TOTP-Spezifikation
+
+- **Standard**: RFC 6238
+- **Algorithm**: SHA-1
+- **Zeitfenster**: 30 Sekunden
+- **Digits**: 6
+- **Toleranz**: ±1 Zeitfenster (90s gesamt)
+- **QR-Format**: `otpauth://totp/DerBot:{Nickname}?secret={Base32Secret}&issuer=DerBot`
+
+### Sicherheit
+
+- TOTP-Secrets werden nur im Backend gespeichert (nie im Frontend)
+- Rate-Limiting verhindert Brute-Force-Angriffe
+- Sessions werden automatisch nach Ablauf gelöscht
+- Für Produktion: HTTPS verwenden (zwingend erforderlich)
+
 ## Architektur-Prinzipien
 
 - **Clean Code** nach Robert C. Martin
@@ -66,4 +149,26 @@ npm test
 
 ## Tests
 
-Unit-Tests mit `node:test` im selben Verzeichnis wie die zu testenden Units.
+Unit-Tests mit `tsx --test` für vollständige TypeScript-Unterstützung (46 Tests):
+
+```bash
+# Alle Tests ausführen
+npm test
+
+# Test-Übersicht:
+# - Backend (9 Tests): RateLimitService (4), TotpService (5)
+# - Frontend (37 Tests):
+#   - SessionStorage (12) - localStorage Session-Verwaltung
+#   - UserAuthenticationUseCase (12) - Konsolidierte Auth-Operationen
+#   - AuthenticationClient (13) - HTTP API Communication
+```
+
+### Test-Konfiguration
+
+- **Test Runner**: `tsx` (TypeScript Executor mit ESM-Unterstützung)
+- **Framework**: `node:test` (Native Node.js Test API)
+- **Locations**: Test-Dateien liegen neben Produktions-Code
+- **Pattern**: Class-basierte Mocks (keine externe Mocking-Bibliothek)
+- **Coverage**: Alle Klassen außer Views getestet
+
+
