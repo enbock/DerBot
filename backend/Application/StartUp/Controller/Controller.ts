@@ -4,6 +4,8 @@ import type ChatController from '../../Chat/Controller/ChatController';
 import type FileUserStorage from '../../../Infrastructure/Authentication/FileUserStorage';
 import type FileSessionStorage from '../../../Infrastructure/Authentication/FileSessionStorage';
 import type FileChatStorage from '../../../Infrastructure/Chat/FileChatStorage';
+import type AIChatClient from '../../../Core/Chat/AIChatClient';
+import CopilotAIChatClient from '../../../Infrastructure/Chat/AIChatClient/CopilotAIChatClient';
 
 export default class Controller {
   private readonly httpServer: HttpServer;
@@ -12,6 +14,7 @@ export default class Controller {
   private readonly userStorage: FileUserStorage;
   private readonly sessionStorage: FileSessionStorage;
   private readonly chatStorage: FileChatStorage;
+  private readonly chatClient: AIChatClient;
 
   constructor(
     httpServer: HttpServer,
@@ -19,7 +22,8 @@ export default class Controller {
     chatController: ChatController,
     userStorage: FileUserStorage,
     sessionStorage: FileSessionStorage,
-    chatStorage: FileChatStorage
+    chatStorage: FileChatStorage,
+    chatClient: AIChatClient
   ) {
     this.httpServer = httpServer;
     this.authenticationController = authenticationController;
@@ -27,6 +31,7 @@ export default class Controller {
     this.userStorage = userStorage;
     this.sessionStorage = sessionStorage;
     this.chatStorage = chatStorage;
+    this.chatClient = chatClient;
   }
 
   async start(): Promise<void> {
@@ -35,6 +40,10 @@ export default class Controller {
     await this.userStorage.initialize();
     await this.sessionStorage.initialize();
     await this.chatStorage.initialize();
+    
+    if (this.chatClient instanceof CopilotAIChatClient) {
+      await this.chatClient.initialize();
+    }
     
     const router = this.httpServer.getRouter();
     
@@ -55,6 +64,11 @@ export default class Controller {
 
   async stop(): Promise<void> {
     console.log('DerBot Backend stopping...');
-    // Cleanup logic
+    
+    if (this.chatClient instanceof CopilotAIChatClient) {
+      await this.chatClient.cleanup();
+    }
+    
+    console.log('DerBot Backend stopped successfully');
   }
 }

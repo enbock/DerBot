@@ -34,7 +34,8 @@ module.exports = {
   },
   devtool: 'source-map',
   externals: {
-    // Exclude node_modules from bundle
+    // Exclude Copilot SDK from bundle (uses import.meta.resolve)
+    '@github/copilot-sdk': 'module @github/copilot-sdk'
   },
   externalsPresets: {
     node: true,

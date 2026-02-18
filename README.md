@@ -58,7 +58,90 @@ DerBot implementiert ein sicheres TOTP (Time-based One-Time Password) Authentica
 
 DerBot bietet eine Chat-Ansicht mit Session-Management und einem technischen Agenten-Log.
 
+### AI Chat Client - GitHub Copilot SDK Integration
+
+DerBot nutzt das **GitHub Copilot SDK** für produktive AI-Antworten. Das System unterstützt zwei Modi:
+
+#### 1. Copilot SDK Modus (Produktiv)
+- **Aktivierung**: Umgebungsvariable `USE_COPILOT_SDK=true` setzen
+- **Voraussetzungen**:
+  - Gültige GitHub Copilot Subscription
+  - GitHub CLI bereits authentifiziert: `gh auth login`
+  - Copilot CLI verfügbar: `gh copilot`
+- **Features**:
+  - Echte AI-Antworten via GitHub Copilot
+  - Multi-turn Conversations mit Session-Management
+  - Agent-Logs mit Tool Calls, Planning Steps, Events
+  - ChatBot Agent orchestriert Sub-Agents (`@po`, zukünftig `@developer`, `@tester`)
+
+#### 2. Dummy Modus (Entwicklung - Standard)
+- **Aktivierung**: Umgebungsvariable `USE_COPILOT_SDK=false` oder nicht gesetzt
+- **Verwendung**: Entwicklung ohne Copilot Subscription
+- **Funktion**: Echo-Antworten für Testing und Development
+
+#### Konfiguration
+
+```bash
+# Copilot SDK verwenden (erfordert Subscription)
+export USE_COPILOT_SDK=true  # Unix/Mac
+set USE_COPILOT_SDK=true     # Windows CMD
+$env:USE_COPILOT_SDK='true'  # Windows PowerShell
+
+# Dummy-Client verwenden (Standard)
+export USE_COPILOT_SDK=false
+# Oder Variable nicht setzen
+
+# Backend starten
+npm start
+```
+
+#### ChatBot Agent
+
+Der ChatBot Agent (`.github/agents/ChatBot.agent.md`) ist ein intelligenter Orchestrator:
+- **Routing**: Delegiert Anfragen an spezialisierte Sub-Agents  
+- **@po Agent**: Anforderungsanalyse, Backlog-Management, User Stories
+- **Erweiterbar**: Zukünftig `@developer` (Code), `@tester` (QA)
+- **Auto-Modell**: Nutzt `auto` oder `gpt-5-mini` für optimale Antworten
+
+**Hinweis**: Die aktuelle SDK-Version (0.1.25) unterstützt noch keine direkte Agent-Parameter-Übergabe in `createSession()`. Die Agent-Logik ist für zukünftige SDK-Versionen vorbereitet und in `.github/agents/` dokumentiert.
+
+#### Technische Details - Webpack External Configuration
+
+Das GitHub Copilot SDK wird **nicht gebundelt** durch Webpack, sondern als **External** behandelt:
+- **Grund**: SDK nutzt Node.js-spezifische Features (`import.meta.resolve`), die nach Bundling nicht funktionieren
+- **Konfiguration**: `webpack.backend.config.cjs` - `externals: { '@github/copilot-sdk': 'module @github/copilot-sdk' }`
+- **Resultat**: SDK wird zur Laufzeit aus `node_modules` geladen
+- **Vorteil**: Zero-Dependency Prinzip - externe SDKs bleiben extern, nur eigener Code wird gebundelt
+
+#### SDK Implementation Details - Event-Handler Pattern
+
+Das Copilot SDK nutzt ein **Event-basiertes API** für Nachrichten:
+- `session.send({ prompt })` - Queued die Nachricht asynchron und gibt sofort zurück (nicht warten!)
+- `session.on('assistant.message', handler)` - Event-Listener für AI-Antworten
+- `session.on('session.idle', handler)` - Event-Listener für End-of-Message Signal
+- `session.on('tool.execution_complete', handler)` - Event für Tool Calls
+
+**Implementierung in [CopilotAIChatClient.ts](backend/Infrastructure/Chat/AIChatClient/CopilotAIChatClient.ts)**:
+```typescript
+// ✓ Richtig: Event-Handler für Antwort-Empfang
+const messageHandler = (event: any) => {
+  if (event?.data?.content) {
+    reply = event.data.content;
+    session.removeListener('assistant.message', messageHandler);
+  }
+};
+
+session.on('assistant.message', messageHandler);
+await session.send({ prompt: message });  // Nicht warten - Event wird emit!
+```
+
+**Agent-Logs** werden aus mehreren Events gesammelt:
+- `assistant.message`: Haupt-Antwort vom Agent
+- `tool.execution_complete`: Tool/API Calls
+- Timestamps zeigen Verarbeitungsschritte
+
 ### Features
+
 
 - **Neuer Chat** erzeugt eine neue Session-ID
 - **Chat-Liste** zentral mit mehrzeiligem Eingabefeld und Senden-Button
@@ -179,20 +262,21 @@ Benutzerdaten werden in `.data/` gespeichert:
 
 ## Tests
 
-Unit-Tests mit `tsx --test` für vollständige TypeScript-Unterstützung (84 Tests):
+Unit-Tests mit `tsx --test` für vollständige TypeScript-Unterstützung (90 Tests):
 
 ```bash
 # Alle Tests ausführen
 npm test
 
 # Test-Übersicht:
-# - Backend (32 Tests):
+# - Backend (38 Tests):
 #   - ChatController (3)
 #   - RateLimitService (4)
 #   - TotpService (5)
 #   - UserAuthenticationUseCase (12)
 #   - ChatUseCase (4)
 #   - DummyAIChatClient (1)
+#   - CopilotAIChatClient (6)
 #   - FileChatStorage (3)
 # - Frontend (52 Tests):
 #   - ChatController (2)

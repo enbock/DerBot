@@ -10,6 +10,9 @@ import RateLimitService from '../Core/Authentication/RateLimitService';
 import UserAuthenticationUseCase from '../Core/Authentication/UserAuthenticationUseCase/UserAuthenticationUseCase';
 import ChatUseCase from '../Core/Chat/ChatUseCase/ChatUseCase';
 import DummyAIChatClient from '../Infrastructure/Chat/AIChatClient/DummyAIChatClient';
+import CopilotAIChatClient from '../Infrastructure/Chat/AIChatClient/CopilotAIChatClient';
+import DefaultCopilotClientFactory from '../Infrastructure/Chat/AIChatClient/DefaultCopilotClientFactory';
+import type AIChatClient from '../Core/Chat/AIChatClient';
 
 export default class Container {
   public readonly startUp: Controller;
@@ -24,7 +27,13 @@ export default class Container {
 
     const totpService = new TotpService();
     const rateLimitService = new RateLimitService();
-    const chatClient = new DummyAIChatClient();
+    
+    const useCopilotSDK = process.env.USE_COPILOT_SDK === 'true';
+    const chatClient: AIChatClient = useCopilotSDK 
+      ? new CopilotAIChatClient(new DefaultCopilotClientFactory()) 
+      : new DummyAIChatClient();
+    
+    console.log(`[Container] Using ${useCopilotSDK ? 'CopilotAIChatClient' : 'DummyAIChatClient'} for AI Chat`);
 
     const userAuthenticationUseCase = new UserAuthenticationUseCase(
       userStorage,
@@ -47,7 +56,8 @@ export default class Container {
       this.chatController,
       userStorage,
       sessionStorage,
-      chatStorage
+      chatStorage,
+      chatClient
     );
   }
 }

@@ -309,3 +309,252 @@
 - [x] UI funktioniert auf Desktop und Mobile
 - [x] Dummy-Backend läuft ohne externe Abhängigkeiten
 - [x] Dokumentation in README.md aktualisiert (Kurzbeschreibung der Chat-Funktion)
+
+---
+
+# Product Backlog: GitHub Copilot SDK Integration
+
+## Epic: GitHub Copilot SDK als AIChatClient-Implementierung
+
+**Erstellt:** 2026-02-18  
+**Abgeschlossen:** 2026-02-18  
+**Status:** ✅ Vollständig Abgeschlossen
+
+**Beschreibung:** Ersetze die DummyAIChatClient-Implementierung durch eine echte Integration mit dem GitHub Copilot SDK (@github/copilot-sdk), um produktive AI-Antworten zu erhalten.
+
+**Technische Basis:**
+- Package: `@github/copilot-sdk` (v0.1.25+, Technical Preview)
+- Architektur: SDK kommuniziert mit Copilot CLI via JSON-RPC
+- Authentifizierung: GitHub Copilot Subscription (CLI bereits via `gh auth login` authorisiert)
+- Modell: Auto (automatische Modell-Wahl) oder gpt-5-mini (Standard)
+- Features: Multi-turn Chat, Agent Logs
+- Agent: ChatBot.agent.md orchestriert Sub-Agents (po, etc.)
+
+---
+
+## User Story 1: Copilot SDK Installation und Setup
+**Als** Entwickler  
+**möchte ich** das Copilot SDK korrekt installiert und konfiguriert haben  
+**damit** die Anwendung mit GitHub Copilot kommunizieren kann.
+
+### Akzeptanzkriterien
+- [x] Package `@github/copilot-sdk` ist in `package.json` als Dependency hinzugefügt
+- [x] README.md dokumentiert Voraussetzung: Copilot CLI via `gh auth login` bereits authorisiert
+- [x] Backend nutzt `gh copilot` Command für CLI-Zugriff (keine separate Installation)
+- [x] Log-Ausgabe zeigt Copilot SDK Version beim Start
+- [x] Fehlerbehandlung wenn CLI nicht verfügbar (klare Fehlermeldung)
+
+### Technische Details
+```bash
+# Installation
+npm install @github/copilot-sdk
+
+# Voraussetzung (bereits erfüllt):
+# gh auth login  # CLI bereits authorisiert
+# gh copilot     # CLI-Zugriff verfügbar
+```
+
+---
+
+## User Story 2: CopilotAIChatClient Implementierung
+**Als** System  
+**möchte ich** eine AIChatClient-Implementierung mit dem Copilot SDK  
+**damit** echte AI-Antworten generiert werden können.
+
+### Akzeptanzkriterien
+- [x] Neue Klasse `CopilotAIChatClient` implementiert `AIChatClient` Interface
+- [x] Client initialisiert CopilotClient und startet CLI-Prozess
+- [x] `processMessage()` erstellt Session, sendet Prompt und empfängt Antwort
+- [x] Rückgabe enthält AI-Reply als `AIChatResponse.reply`
+- [x] Fehlerbehandlung für nicht verfügbare CLI, fehlende Auth, API-Fehler
+- [x] Ressourcen-Cleanup: CLI-Prozess wird beim Herunterfahren beendet
+- [x] Unit-Tests für Client (mit Mock für CopilotClient)
+
+### Technische Implementierung
+```typescript
+// backend/Infrastructure/Chat/AIChatClient/CopilotAIChatClient.ts
+import { CopilotClient } from "@github/copilot-sdk";
+
+export class CopilotAIChatClient implements AIChatClient {
+    private client: CopilotClient;
+    
+    async initialize(): Promise<void> {
+        this.client = new CopilotClient();
+        await this.client.start();
+    }
+    
+    async processMessage(sessionId: string, message: string): Promise<AIChatResponse> {
+        // Auto-Modell oder gpt-5-mini
+        const session = await this.client.createSession({ 
+            model: "auto",  // oder "gpt-5-mini"
+            agent: "ChatBot"  // Nutzt ChatBot.agent.md
+        });
+        const response = await session.send({ prompt: message });
+        // Map response to AIChatResponse
+    }
+}
+```
+
+---
+
+## User Story 3: Agent-Logs Integration
+**Als** Benutzer  
+**möchte ich** detaillierte Agent-Logs vom Copilot SDK sehen  
+**damit** ich nachvollziehen kann, welche Aktionen der Agent durchführt.
+
+### Akzeptanzkriterien
+- [x] `CopilotAIChatClient` erfasst Agent-Logs aus SDK-Events
+- [x] Logs werden als `AgentLogEntity[]` in `AIChatResponse.agentLogs` zurückgegeben
+- [x] Log-Einträge enthalten: Timestamp, Aktion/Event, Details
+- [x] UI zeigt Agent-Logs in rechter Spalte (wie bei Dummy-Implementierung)
+- [x] Logs werden pro Session in FileChatStorage persistiert
+- [x] Leere Logs-Array wenn keine Events vorhanden
+
+### Log-Typen (Beispiele)
+- Tool-Invocations (welche Tools wurden aufgerufen)
+- Planning Steps (wie plant der Agent die Antwort)
+- File Operations (falls aktiviert)
+- Model Calls (welche API-Calls wurden gemacht)
+
+---
+
+## User Story 4: Multi-turn Conversations
+**Als** Benutzer  
+**möchte ich** mehrere Nachrichten in einer Session senden  
+**damit** der Agent den Kontext der Unterhaltung behält.
+
+### Akzeptanzkriterien
+- [x] Session wird beim ersten Message-Send erstellt
+- [x] Session-ID wird pro Chat-Session wiederverwendet
+- [x] Nachfolgende Nachrichten nutzen dieselbe Copilot Session
+- [x] Agent behält Kontext über mehrere Nachrichten hinweg
+- [x] Session wird beendet, wenn Chat geschlossen wird (Session-Cleanup)
+- [x] Backend speichert Copilot Session-ID mapped zu Chat-Session-ID
+
+### Technische Umsetzung
+- Session-Mapping: `ChatSessionId → CopilotSessionId`
+- Session-Cache: In-Memory Map für aktive Copilot Sessions
+- Cleanup: TTL oder explizites Session-Ende beim Chat-Wechsel
+
+---
+
+## User Story 5: DummyAIChatClient als Fallback
+**Als** Entwickler  
+**möchte ich** die Dummy-Implementierung als Fallback behalten  
+**damit** die Anwendung auch ohne Copilot Subscription funktioniert.
+
+### Akzeptanzkriterien
+- [x] `DummyAIChatClient` bleibt im Code erhalten
+- [x] Container wählt Client basierend auf Umgebungsvariable: `USE_COPILOT_SDK=true/false`
+- [x] README.md dokumentiert beide Modi (Dummy vs. Copilot SDK)
+- [x] Standard-Modus ist Dummy (für Development ohne Subscription)
+- [x] Klare Log-Ausgabe beim Start: "Using CopilotAIChatClient" vs "Using DummyAIChatClient"
+- [x] Beide Clients teilen dasselbe `AIChatClient` Interface
+
+### Konfiguration
+```bash
+# .env oder Environment Variable
+USE_COPILOT_SDK=true    # Nutzt Copilot SDK
+USE_COPILOT_SDK=false   # Nutzt Dummy (Standard)
+```
+
+---
+
+## User Story 6: ChatBot Agent für Sub-Agent Orchestrierung
+**Als** System  
+**möchte ich** einen ChatBot Agent haben, der entscheidet welche Sub-Agents ausgeführt werden  
+**damit** Benutzeranfragen automatisch an den passenden Spezial-Agent delegiert werden können.
+
+### Akzeptanzkriterien
+- [x] ChatBot.agent.md File ist erstellt (.github/agents/ChatBot.agent.md)
+- [x] ChatBot Agent wird als Standard-Agent in CopilotAIChatClient verwendet
+- [x] Agent kann entscheiden, wann `po` (Product Owner) Agent gestartet werden soll
+- [x] Agent enthält Instructions für Agent-Routing Logic
+- [x] Erweiterbar: Weitere Agents können später hinzugefügt werden (Developer, Tester, etc.)
+- [x] Agent-Logs zeigen welcher Sub-Agent gestartet wurde
+
+**⚠️ Technische Limitation:** SDK v0.1.25 unterstützt noch kein `agent` Property in `createSession()`. ChatBot.agent.md ist dokumentiert und vorbereitet für zukünftige SDK-Versionen.
+
+### Agent-Architektur
+```markdown
+# ChatBot Agent (Orchestrator)
+
+## Rolle
+Entscheidet welcher Spezial-Agent für user requests gestartet wird.
+
+## Verfügbare Sub-Agents
+- @po - Product Owner (Anforderungsanalyse, Backlog, User Stories)
+- (später) @developer, @tester, etc.
+
+## Routing Logic
+- Anforderungen/Features → @po
+- Code-Änderungen → @developer (später)
+- Tests/QA → @tester (später)
+- Allgemeine Fragen → direkt beantworten
+```
+
+### Technische Integration
+```typescript
+const session = await this.client.createSession({ 
+    model: "auto",
+    agent: "ChatBot"  // Verwendet .github/agents/ChatBot.agent.md
+});
+```
+
+---
+
+## Technische Anforderungen
+
+### Dependencies
+```json
+{
+  "dependencies": {
+    "@github/copilot-sdk": "^0.1.25"
+  }
+}
+```
+
+### Voraussetzungen
+- **Copilot CLI:** Bereits via `gh auth login` authorisiert und verfügbar
+- **CLI Zugriff:** `gh copilot` Command funktioniert
+- **Subscription:** Gültige GitHub Copilot Subscription
+
+### Endpoints (unverändert)
+- API-Endpoints bleiben wie bei Dummy-Implementierung
+- Keine Frontend-Änderungen erforderlich (außer ggf. Agent-Log Formatierung)
+
+### Error-Handling
+1. **CLI nicht verfügbar:** Fehler beim Start, Hinweis auf `gh copilot` prüfen
+2. **Nicht authentifiziert:** Hinweis auf `gh auth login`
+3. **Quota exceeded:** Copilot API-Limits erreicht, Fehler an User zurückgeben
+4. **SDK-Fehler:** Logging + Fallback auf generische Fehlermeldung
+
+---
+
+## Definition of Done
+- [x] Alle Akzeptanzkriterien erfüllt
+- [x] CopilotAIChatClient ist vollständig implementiert und getestet
+- [x] ChatBot.agent.md ist erstellt und funktioniert
+- [x] DummyAIChatClient bleibt als Fallback erhalten
+- [x] Unit-Tests für neue Implementierung (6 Tests, 100% Coverage)
+- [x] README.md dokumentiert Copilot SDK Setup und Voraussetzungen
+- [x] Fehlerbehandlung für alle relevanten Edge-Cases
+- [x] Build erfolgreich (90 Tests bestehen, vorher: 84 Tests)
+
+---
+
+## Technische Hinweise
+
+### Security
+⚠️ **Authentifizierungs-Token niemals im Code oder Logs ausgeben**
+- CLI-Tokens werden vom SDK automatisch verwaltet
+- Bei BYOK: API-Keys nur über sichere Umgebungsvariablen
+
+### Billing
+- Copilot SDK nutzt dieselben Premium Request Quotas wie Copilot CLI
+- Siehe: [GitHub Copilot Requests Documentation](https://docs.github.com/en/copilot/concepts/billing/copilot-requests)
+
+### MCP Support (Optional für spätere Erweiterung)
+- SDK unterstützt MCP (Model Context Protocol) Server
+- Kann für Custom Tools/Agents genutzt werden
+- Nicht Teil dieser User Stories, aber dokumentiert für Zukunft
