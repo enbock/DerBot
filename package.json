@@ -1,0 +1,27 @@
+{
+  "name": "derbot",
+  "version": "1.0.0",
+  "description": "DerBot - Clean Architecture TypeScript Application",
+  "type": "module",
+  "main": "build/backend/main.js",
+  "scripts": {
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "webpack --config webpack.backend.config.cjs",
+    "build:frontend": "webpack --config webpack.frontend.config.cjs",
+    "build:watch": "npm run build:backend -- --watch & npm run build:frontend -- --watch",
+    "start": "node build/backend/main.js",
+    "test": "node --test --experimental-strip-types backend/**/*.test.ts",
+    "dev": "npm run build:watch & npm run start"
+  },
+  "keywords": ["bot", "typescript", "clean-architecture", "ddd"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {}
+}
